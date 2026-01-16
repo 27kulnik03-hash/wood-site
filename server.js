@@ -225,13 +225,31 @@ app.get('/api/user/profile', requireAuth, checkDbReady, async (req, res) => {
 // ─── Деревья ───────────────────────────────────────
 app.get('/api/trees', checkDbReady, async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;   // текущая страница, по умолчанию 1
+        const limit = 8;                              // максимум 8 деревьев на страницу
+        const offset = (page - 1) * limit;           // смещение
+
+        // Сначала считаем общее количество деревьев
+        const countResult = await pool.query('SELECT COUNT(*) FROM trees');
+        const total = parseInt(countResult.rows[0].count);
+        const totalPages = Math.ceil(total / limit);
+
+        // Получаем деревья для текущей страницы
         const result = await pool.query(`
             SELECT t.*, u.username as creator_name
             FROM trees t
             LEFT JOIN users u ON t.created_by = u.id
             ORDER BY t.created_at DESC
-        `);
-        res.json({ success: true, trees: result.rows });
+            LIMIT $1 OFFSET $2
+        `, [limit, offset]);
+
+        res.json({
+            success: true,
+            page,
+            totalPages,
+            totalItems: total,
+            trees: result.rows
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Не удалось загрузить деревья' });

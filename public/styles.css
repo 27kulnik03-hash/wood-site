@@ -4,12 +4,84 @@
     box-sizing: border-box;
 }
 
-body {
+html, body {
+    height: 100%;
+    margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+    background-attachment: fixed;
+    background-size: cover;
 }
+
+/* Вся страница в обёртке, чтобы футер был внизу */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Контент растягивается на оставшееся место */
+.page-wrapper {
+    flex: 1;
+    padding-bottom: 10px; /* небольшой отступ между контентом и футером */
+}
+
+/* Основной контент можно дополнять внутренними отступами */
+main {
+    padding: 10px 20px;
+}
+
+/* Футер */
+footer {
+    background: rgba(0,0,0,0.2);
+    color: #fff;
+    padding: 20px 0;
+    text-align: center;
+    backdrop-filter: blur(6px);
+    width: 100%;
+}
+
+.pagination-container {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.pagination {
+    display: inline-flex;
+    list-style: none;
+    padding: 0;
+    gap: 8px;
+}
+
+.pagination li button {
+    background: #fff;
+    color: #667eea;
+    border: 1px solid #667eea;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.pagination li button:hover {
+    background: #667eea;
+    color: #fff;
+}
+
+.pagination li.active button {
+    background: #4CAF50;
+    color: #fff;
+    border-color: #4CAF50;
+}
+
+.pagination li.disabled button {
+    background: #eee;
+    color: #999;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
 
 header {
     text-align: center;
@@ -44,6 +116,10 @@ header p {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
+}
+
+.trees-container {
+    padding-bottom: 10px; /* пространство между последней карточкой и футером */
 }
 
 .tree-card:hover {
