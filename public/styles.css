@@ -109,6 +109,32 @@ header p {
     margin: 0 auto;
 }
 
+/* Поля ввода и textarea */
+#addTreeForm input[type="text"],
+#addTreeForm input[type="file"],
+#addTreeForm textarea {
+    padding: 4px 8px;       /* ещё меньше */
+    margin-bottom: 8px;     /* чуть меньше отступ между полями */
+    font-size: 0.95rem;     /* чуть меньше текста */
+}
+
+/* Текстовое поле описания (textarea) */
+#addTreeForm textarea {
+    min-height: 60px;       /* уменьшено */
+    max-height: 100px;      /* уменьшено */
+}
+
+/* Кнопки */
+#addTreeForm button {
+    padding: 4px 12px;      /* меньше кнопка */
+    font-size: 0.95rem;     /* чуть меньше текста */
+}
+
+/* Контейнер формы */
+#addTreeForm {
+    gap: 8px;               /* уменьшено расстояние между элементами */
+}
+
 .tree-card {
     background: white;
     border-radius: 15px;
