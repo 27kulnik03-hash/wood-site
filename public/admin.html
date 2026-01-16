@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Admin - Tree Encyclopedia</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .admin-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .admin-header h1 {
+            color: #333;
+            font-size: 2rem;
+        }
+        .refresh-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #667eea;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 2.5rem;
+            margin: 10px 0;
+        }
+        .stat-card p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-card">
+            <div class="admin-header">
+                <h1>📊 Database Admin Panel</h1>
+                <button class="refresh-btn" onclick="loadUsers()">🔄 Refresh</button>
+            </div>
+            
+            <div class="stats" id="stats">
+                <!-- Stats will be loaded here -->
+            </div>
+            
+            <div id="loading" style="text-align: center; padding: 40px;">
+                <p>Loading users...</p>
+            </div>
+            
+            <div id="usersTable" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersBody">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <a href="/" class="back-link">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayUsers(data.users);
+                    displayStats(data.users);
+                } else {
+                    document.getElementById('loading').innerHTML = 
+                        '<p style="color: red;">Error: ' + (data.error || 'Failed to load users') + '</p>';
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('loading').innerHTML = 
+                    '<p style="color: red;">Error loading users. Make sure the server is running.</p>';
+            }
+        }
+
+        function displayStats(users) {
+            const statsDiv = document.getElementById('stats');
+            statsDiv.innerHTML = `
+                <div class="stat-card">
+                    <p>Total Users</p>
+                    <h3>${users.length}</h3>
+                </div>
+                <div class="stat-card">
+                    <p>Database File</p>
+                    <h3 style="font-size: 1.5rem;">trees.db</h3>
+                </div>
+            `;
+        }
+
+        function displayUsers(users) {
+            const loading = document.getElementById('loading');
+            const table = document.getElementById('usersTable');
+            const tbody = document.getElementById('usersBody');
+            
+            loading.style.display = 'none';
+            table.style.display = 'block';
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">No users found in database</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.id}</td>
+                    <td><strong>${user.username}</strong></td>
+                    <td>${user.email}</td>
+                    <td>${new Date(user.created_at).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Load users on page load
+        loadUsers();
+    </script>
+</body>
+</html>
