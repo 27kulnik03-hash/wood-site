@@ -4,10 +4,16 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const path = require('path');
 const multer = require('multer');
-const { pool, testConnection, initializeDatabase } = require('./config/database');
+const { Pool } = require('pg');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
+// PostgreSQL pool
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
 // Multer настройка для аватаров
 const storage = multer.diskStorage({
@@ -47,15 +53,64 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'tree-encyclopedia-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 let dbReady = false;
 
+async function testConnection() {
+    try {
+        const client = await pool.connect();
+        await client.query('SELECT NOW()');
+        client.release();
+        console.log('✅ Connected to PostgreSQL');
+        return true;
+    } catch (err) {
+        console.error('PostgreSQL connection error:', err);
+        return false;
+    }
+}
+
+async function initializeDatabase() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                avatar VARCHAR(255),
+                role VARCHAR(50) DEFAULT 'user',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS trees (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                scientific_name VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                habitat TEXT NOT NULL,
+                image TEXT NOT NULL,
+                facts JSONB DEFAULT '{}',
+                created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        console.log('✅ Tables initialized');
+        return true;
+    } catch (err) {
+        console.error('Table initialization error:', err);
+        return false;
+    }
+}
+
 async function startServer() {
     const connected = await testConnection();
     if (!connected) {
-        console.error('Не удалось подключиться к MySQL');
+        console.error('Не удалось подключиться к PostgreSQL');
         process.exit(1);
     }
 
@@ -85,7 +140,7 @@ app.get('/api/auth/check', (req, res) => {
             id: req.session.user.id,
             username: req.session.user.username,
             avatar: req.session.user.avatar || null,
-            role: req.session.user.role || 'user'  // ← Добавлена роль
+            role: req.session.user.role || 'user'
         } : null
     });
 });
@@ -102,22 +157,24 @@ app.post('/api/auth/register', async (req, res) => {
             return res.status(400).json({ error: 'Пароль минимум 6 символов' });
         }
 
-        const [existing] = await pool.execute(
-            'SELECT * FROM users WHERE username = ? OR email = ?',
+        const existingRes = await pool.query(
+            'SELECT * FROM users WHERE username = $1 OR email = $1',
             [username, email]
         );
-        if (existing.length > 0) {
+        if (existingRes.rows.length > 0) {
             return res.status(400).json({ error: 'Имя пользователя или email уже занят' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const [result] = await pool.execute(
-            'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-            [username, email, hashedPassword, 'user']  // ← Новый пользователь = user
+        const result = await pool.query(
+            'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
+            [username, email, hashedPassword, 'user']
         );
 
+        const insertId = result.rows[0].id;
+
         req.session.user = {
-            id: result.insertId,
+            id: insertId,
             username,
             avatar: null,
             role: 'user'
@@ -135,15 +192,15 @@ app.post('/api/auth/login', async (req, res) => {
 
     try {
         const { username, password } = req.body;
-        const [users] = await pool.execute(
-            'SELECT id, username, password, avatar, role FROM users WHERE username = ? OR email = ?',
-            [username, username]
+        const result = await pool.query(
+            'SELECT id, username, password, avatar, role FROM users WHERE username = $1 OR email = $1',
+            [username]
         );
-        if (users.length === 0) {
+        if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Неверные данные' });
         }
 
-        const user = users[0];
+        const user = result.rows[0];
         const match = await bcrypt.compare(password, user.password);
         if (!match) {
             return res.status(401).json({ error: 'Неверные данные' });
@@ -153,13 +210,12 @@ app.post('/api/auth/login', async (req, res) => {
             id: user.id,
             username: user.username,
             avatar: user.avatar,
-            role: user.role  // ← Добавлена роль
+            role: user.role
         };
 
         res.json({
             success: true,
-            message: 'Вход выполнен',
-            user: { id: user.id, username: user.username, avatar: user.avatar, role: user.role }
+            message: 'Вход выполнен'
         });
     } catch (err) {
         console.error(err);
@@ -183,8 +239,8 @@ app.post('/api/user/avatar', requireAuth, upload.single('avatar'), async (req, r
     try {
         const avatarPath = `/uploads/avatars/${req.file.filename}`;
 
-        await pool.execute(
-            'UPDATE users SET avatar = ? WHERE id = ?',
+        await pool.query(
+            'UPDATE users SET avatar = $1 WHERE id = $2',
             [avatarPath, req.session.user.id]
         );
 
@@ -203,14 +259,14 @@ app.post('/api/user/avatar', requireAuth, upload.single('avatar'), async (req, r
 
 app.get('/api/user/profile', requireAuth, async (req, res) => {
     try {
-        const [rows] = await pool.execute(
-            'SELECT id, username, email, avatar, role FROM users WHERE id = ?',
+        const result = await pool.query(
+            'SELECT id, username, email, avatar, role FROM users WHERE id = $1',
             [req.session.user.id]
         );
-        if (rows.length === 0) {
+        if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Пользователь не найден' });
         }
-        res.json({ success: true, user: rows[0] });
+        res.json({ success: true, user: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: 'Ошибка сервера' });
     }
@@ -219,15 +275,16 @@ app.get('/api/user/profile', requireAuth, async (req, res) => {
 // ─── Деревья ───────────────────────────────────────────
 
 app.get('/api/trees', async (req, res) => {
+    console.log('GET /api/trees — запрос получен');
     try {
-        const [trees] = await pool.execute(`
+        const result = await pool.query(`
             SELECT t.*, u.username as creator_name
             FROM trees t
-                     LEFT JOIN users u ON t.created_by = u.id
+            LEFT JOIN users u ON t.created_by = u.id
             ORDER BY t.created_at DESC
         `);
-        console.log('Деревьев найдено:', trees.length);
-        res.json({ success: true, trees });
+        console.log('Деревьев найдено:', result.rows.length);
+        res.json({ success: true, trees: result.rows });
     } catch (err) {
         console.error('Ошибка GET /api/trees:', err);
         res.status(500).json({ error: 'Не удалось загрузить деревья' });
@@ -246,13 +303,13 @@ app.post('/api/trees', requireAuth, async (req, res) => {
 
         const factsJson = typeof facts === 'object' ? facts : {};
 
-        const [result] = await pool.execute(
+        const result = await pool.query(
             `INSERT INTO trees (name, scientific_name, description, habitat, image, facts, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
             [name, scientificName, description, habitat, image, JSON.stringify(factsJson), req.session.user.id]
         );
 
-        res.json({ success: true, message: 'Tree added', id: result.insertId });
+        res.json({ success: true, message: 'Tree added', id: result.rows[0].id });
     } catch (err) {
         console.error('Error adding tree:', err);
         res.status(500).json({ error: 'Failed to add tree' });
@@ -263,19 +320,17 @@ app.delete('/api/trees/:id', requireAuth, async (req, res) => {
     try {
         const treeId = req.params.id;
 
-        // Получаем дерево и его создателя
-        const [trees] = await pool.execute(
-            'SELECT created_by FROM trees WHERE id = ?',
+        const result = await pool.query(
+            'SELECT created_by FROM trees WHERE id = $1',
             [treeId]
         );
 
-        if (trees.length === 0) {
+        if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Дерево не найдено' });
         }
 
-        const treeCreatorId = trees[0].created_by;
+        const treeCreatorId = result.rows[0].created_by;
 
-        // Проверяем права: владелец ИЛИ админ
         const isAdmin = req.session.user.role === 'admin';
         const isOwner = treeCreatorId === req.session.user.id;
 
@@ -283,8 +338,7 @@ app.delete('/api/trees/:id', requireAuth, async (req, res) => {
             return res.status(403).json({ error: 'У вас нет прав на удаление этого дерева' });
         }
 
-        // Удаляем
-        await pool.execute('DELETE FROM trees WHERE id = ?', [treeId]);
+        await pool.query('DELETE FROM trees WHERE id = $1', [treeId]);
 
         res.json({ success: true, message: 'Дерево удалено' });
     } catch (err) {
