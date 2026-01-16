@@ -16,15 +16,15 @@
 
         <!-- Кнопки для незалогиненных пользователей -->
         <div class="auth-buttons" id="authButtons">
-            <a href="/login" class="btn btn-secondary">Login</a>
-            <a href="/register" class="btn btn-primary">Register</a>
+            <a href="login.html" class="btn btn-secondary">Login</a>
+            <a href="register.html" class="btn btn-primary">Register</a>
         </div>
 
         <!-- Блок для залогиненного пользователя -->
         <div class="user-info" id="userInfo" style="display: flex; align-items: center; gap: 16px; position: relative;">
             <div class="user-avatar-wrapper" id="userAvatarWrapper" style="cursor: pointer; position: relative;">
                 <img id="userAvatar"
-                     src="/images/default-avatar.jpg"
+                     src="images/default-avatar.jpg"
                      alt="Аватар"
                      style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid white; background: #eee;">
             </div>
@@ -42,20 +42,20 @@
 
 <div style="max-width: 1400px; margin: 0 auto 30px; padding: 0 20px;">
     <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;">
-        <!-- Поиск с иконкой -->
         <div style="position: relative; flex: 1; min-width: 300px;">
-            <input type="text" id="searchInput" placeholder="Поиск по названию дерева..." style="width: 100%; padding: 14px 20px 14px 48px; border-radius: 50px; border: none; background: rgba(255,255,255,0.95); font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); outline: none;">
+            <input type="text" id="searchInput" placeholder="Поиск по названию дерева..."
+                   style="width: 100%; padding: 14px 20px 14px 48px; border-radius: 50px; border: none; background: rgba(255,255,255,0.95); font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); outline: none;">
             <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #666; font-size: 1.3rem;">🔍</span>
         </div>
 
-        <!-- Кнопка открытия фильтров -->
-        <button id="filterToggleBtn" style="background: rgba(255,255,255,0.2); border: 1px solid white; color: white; padding: 12px 16px; border-radius: 50px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; transition: all 0.3s;">
+        <button id="filterToggleBtn"
+                style="background: rgba(255,255,255,0.2); border: 1px solid white; color: white; padding: 12px 16px; border-radius: 50px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; transition: all 0.3s;">
             ⚙️ Фильтры
         </button>
     </div>
 
-    <!-- Панель фильтров (скрыта по умолчанию) -->
-    <div id="filtersPanel" style="display: none; margin-top: 16px; padding: 16px; background: rgba(255,255,255,0.15); border-radius: 16px; backdrop-filter: blur(10px); text-align: center;">
+    <div id="filtersPanel"
+         style="display: none; margin-top: 16px; padding: 16px; background: rgba(255,255,255,0.15); border-radius: 16px; backdrop-filter: blur(10px); text-align: center;">
         <label style="color: white; font-size: 1.1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 12px;">
             <input type="checkbox" id="myTreesOnly" style="width: 20px; height: 20px; accent-color: #4CAF50;">
             Показывать только мои деревья
@@ -63,7 +63,6 @@
     </div>
 </div>
 
-<!-- Кнопка добавления дерева – должна быть видна для залогиненных -->
 <div id="addTreeButtonContainer" style="text-align: center; margin: 20px 0; display: block;">
     <button class="btn btn-primary" id="addTreeBtn" style="font-size: 1.2rem; padding: 15px 30px;">
         ➕ Добавить новое дерево
@@ -71,18 +70,13 @@
 </div>
 
 <main>
-    <div class="trees-container" id="treesContainer">
-        <!-- Деревья будут добавляться динамически через JS -->
-    </div>
+    <div class="trees-container" id="treesContainer"></div>
 </main>
 
-<!-- Модальное окно для просмотра дерева -->
 <div class="modal" id="treeModal">
     <div class="modal-content">
         <span class="close">×</span>
-        <div class="modal-body" id="modalBody">
-            <!-- Контент будет вставляться JS -->
-        </div>
+        <div class="modal-body" id="modalBody"></div>
     </div>
 </div>
 
