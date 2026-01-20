@@ -18,6 +18,112 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+html.dark-mode {
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+    background-attachment: fixed;
+    background-size: cover;
+}
+
+body.dark-mode .auth-card {
+    background: #1e1e2f;
+    color: #ffffff;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+body.dark-mode .auth-card h1 {
+    color: #ffffff;
+}
+
+body.dark-mode .auth-subtitle {
+    color: #cccccc;
+}
+
+body.dark-mode .auth-footer,
+body.dark-mode .auth-footer a {
+    color: #ffffff;
+}
+
+body.dark-mode .auth-footer a:hover {
+    color: #667eea;
+}
+
+body.dark-mode input,
+body.dark-mode textarea {
+    background: #2d2d44;
+    border: 1px solid #444;
+    color: #ffffff;
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+    color: #bbbbbb;
+}
+
+body.dark-mode .auth-message.success {
+    background: #28a745;
+    color: #ffffff;
+    border: 1px solid #28a745;
+}
+
+body.dark-mode .auth-message.error {
+    background: #dc3545;
+    color: #ffffff;
+    border: 1px solid #dc3545;
+}
+
+body.dark-mode .btn-primary {
+    background: #667eea;
+    color: #ffffff;
+}
+/* Labels in dark mode */
+body.dark-mode .auth-card label {
+    color: #ffffff; /* белый цвет */
+}
+
+
+body.dark-mode .btn-primary:hover {
+    background: #5560c8;
+    color: #ffffff;
+}
+
+/* Заголовок страницы */
+body.dark-mode #pageTitle {
+    color: #ffffff;
+}
+
+/* Подзаголовок */
+body.dark-mode .auth-subtitle {
+    color: #ffffff;
+}
+
+/* Все метки полей формы */
+body.dark-mode #addTreeForm label {
+    color: #ffffff;
+}
+
+/* Плейсхолдеры тоже сделаем светлыми */
+body.dark-mode #addTreeForm input::placeholder,
+body.dark-mode #addTreeForm textarea::placeholder {
+    color: #cccccc;
+}
+
+/* Сообщения под полями */
+body.dark-mode #addTreeForm small {
+    color: #cccccc;
+}
+
+/* Кнопка “Добавить факт” */
+body.dark-mode #addFactBtn {
+    background: #28a745;
+    color: #ffffff;
+}
+
+/* Кнопка отправки */
+body.dark-mode #submitBtn {
+    background: #667eea;
+    color: #ffffff;
+}
+
 body.dark-mode #searchInput {
     background: rgba(30, 32, 55, 0.92);
     color: #000;              /* ← ЧЁРНЫЙ ТЕКСТ */
@@ -614,4 +720,5 @@ header p {
     background: #fff5f5;
     color: #c82333;
 }
+
 

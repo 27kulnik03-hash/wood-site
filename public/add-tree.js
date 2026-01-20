@@ -2,6 +2,17 @@ let currentImage = null; // Хранит текущее изображение (
 let treeId = null;       // ID дерева при редактировании
 let isEditMode = false;
 
+document.addEventListener("DOMContentLoaded", () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.documentElement.classList.add('dark-mode'); // если нужны стили для html
+    }
+});
+
+
+
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Определяем режим по параметру id в URL
     const urlParams = new URLSearchParams(window.location.search);

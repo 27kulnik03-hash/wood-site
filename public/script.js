@@ -133,6 +133,7 @@ async function loadTrees(page = 1) {
     } catch (err) { console.error('Load trees error:', err); }
 }
 
+
 // ─── Рендер карточек деревьев ──────────────────────
 function renderTreeCards() {
     const container = document.getElementById('treesContainer');
@@ -217,13 +218,48 @@ function renderPagination() {
     container.appendChild(ul);
 }
 
-// ─── Фильтры поиска и чекбокс ─────────────────────
-function setupFilters() {
+async function setupFilters() {
     const filterToggleBtn = document.getElementById('filterToggleBtn');
     const filtersPanel = document.getElementById('filtersPanel');
     const myTreesOnlyCheckbox = document.getElementById('myTreesOnly');
     const searchInput = document.getElementById('searchInput');
 
+    // Проверяем, авторизован ли пользователь
+    let isAuthorized = false;
+    try {
+        const res = await fetch('/api/user/profile', { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            isAuthorized = data.success && data.user;
+        }
+    } catch (err) {
+        console.error('Ошибка проверки авторизации:', err);
+    }
+
+    if (!isAuthorized) {
+        // Если не авторизован — скрываем кнопку и панель фильтров
+        if (filterToggleBtn) filterToggleBtn.style.display = 'none';
+        if (filtersPanel) filtersPanel.style.display = 'none';
+        return; // дальше ничего не делаем
+    }
+
+    if (myTreesOnlyCheckbox) {
+        myTreesOnlyCheckbox.addEventListener('change', e => {
+            showMyTreesOnly = e.target.checked;
+
+            // Сбрасываем пагинацию на первую страницу
+            currentPage = 1;
+
+            renderTreeCards();
+            renderPagination();
+        });
+    }
+
+    // Если авторизован — показываем кнопку и панель (по умолчанию скрыта)
+    if (filterToggleBtn) filterToggleBtn.style.display = 'inline-block';
+    if (filtersPanel && !filtersPanel.style.display) filtersPanel.style.display = 'none';
+
+    // Навешиваем обработчик кнопки фильтров
     if (filterToggleBtn && filtersPanel) {
         filterToggleBtn.addEventListener('click', () => {
             const isHidden = filtersPanel.style.display === 'none' || !filtersPanel.style.display;
@@ -232,6 +268,7 @@ function setupFilters() {
         });
     }
 
+    // Навешиваем обработчик "Мои деревья"
     if (myTreesOnlyCheckbox) {
         myTreesOnlyCheckbox.addEventListener('change', e => {
             showMyTreesOnly = e.target.checked;
@@ -240,6 +277,7 @@ function setupFilters() {
         });
     }
 
+    // Навешиваем поиск
     if (searchInput) {
         searchInput.addEventListener('input', e => {
             searchQuery = e.target.value;
@@ -248,6 +286,8 @@ function setupFilters() {
         });
     }
 }
+
+
 
 // ─── Модальное окно ─────────────────────────────────
 function setupModal() {
@@ -329,7 +369,11 @@ if (themeToggle) {
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         themeToggle.textContent = isDark ? '☀️' : '🌙';
     });
-}
+}ы
+
+
+// Запуск после загрузки страницы
+document.addEventListener('DOMContentLoaded', setupFilters);
 
 function closeModal() {
     const modal = document.getElementById('treeModal');

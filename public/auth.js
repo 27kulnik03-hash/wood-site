@@ -6,6 +6,14 @@ const isRegisterPage = window.location.pathname.includes('register');
 const form = isLoginPage ? document.getElementById('loginForm') : document.getElementById('registerForm');
 const messageDiv = document.getElementById('message');
 
+document.addEventListener("DOMContentLoaded", () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.documentElement.classList.add('dark-mode');
+    }
+});
+
 // Handle form submission
 if (form) {
     form.addEventListener('submit', async (e) => {
