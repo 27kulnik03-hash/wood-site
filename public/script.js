@@ -5,6 +5,7 @@ let totalPages = 1;    // общее количество страниц
 let searchQuery = '';
 let showMyTreesOnly = false;
 const TREES_PER_PAGE = 8; // количество деревьев на страницу
+window.currentUser = null;
 
 // ─── Инициализация страницы ──────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -218,76 +219,65 @@ function renderPagination() {
     container.appendChild(ul);
 }
 
-async function setupFilters() {
+// ─── Инициализация пользователя ───────────────────
+async function initUser() {
+    try {
+        const res = await fetch('/api/auth/check', { credentials: 'include' });
+        const data = await res.json();
+        window.currentUser = data.loggedIn ? data.user : null;
+    } catch (err) {
+        console.error('Ошибка проверки авторизации:', err);
+        window.currentUser = null;
+    }
+}
+
+// ─── Настройка фильтров и поиска ──────────────────
+function setupFilters() {
     const filterToggleBtn = document.getElementById('filterToggleBtn');
     const filtersPanel = document.getElementById('filtersPanel');
     const myTreesOnlyCheckbox = document.getElementById('myTreesOnly');
     const searchInput = document.getElementById('searchInput');
 
-    // Проверяем, авторизован ли пользователь
-    let isAuthorized = false;
-    try {
-        const res = await fetch('/api/user/profile', { credentials: 'include' });
-        if (res.ok) {
-            const data = await res.json();
-            isAuthorized = data.success && data.user;
-        }
-    } catch (err) {
-        console.error('Ошибка проверки авторизации:', err);
-    }
+    const isAuthorized = !!window.currentUser;
 
+    // Панель фильтров только для авторизованных
     if (!isAuthorized) {
-        // Если не авторизован — скрываем кнопку и панель фильтров
         if (filterToggleBtn) filterToggleBtn.style.display = 'none';
         if (filtersPanel) filtersPanel.style.display = 'none';
-        return; // дальше ничего не делаем
-    }
+    } else {
+        if (filterToggleBtn) filterToggleBtn.style.display = 'inline-block';
+        if (filtersPanel) filtersPanel.style.display = 'none';
 
-    if (myTreesOnlyCheckbox) {
-        myTreesOnlyCheckbox.addEventListener('change', e => {
-            showMyTreesOnly = e.target.checked;
-
-            // Сбрасываем пагинацию на первую страницу
-            currentPage = 1;
-
-            renderTreeCards();
-            renderPagination();
-        });
-    }
-
-    // Если авторизован — показываем кнопку и панель (по умолчанию скрыта)
-    if (filterToggleBtn) filterToggleBtn.style.display = 'inline-block';
-    if (filtersPanel && !filtersPanel.style.display) filtersPanel.style.display = 'none';
-
-    // Навешиваем обработчик кнопки фильтров
-    if (filterToggleBtn && filtersPanel) {
-        filterToggleBtn.addEventListener('click', () => {
-            const isHidden = filtersPanel.style.display === 'none' || !filtersPanel.style.display;
+        // Кнопка фильтров
+        filterToggleBtn?.addEventListener('click', () => {
+            const isHidden = filtersPanel.style.display === 'none';
             filtersPanel.style.display = isHidden ? 'block' : 'none';
             filterToggleBtn.textContent = isHidden ? 'Закрыть фильтры ⚙️' : '⚙️ Фильтры';
         });
-    }
 
-    // Навешиваем обработчик "Мои деревья"
-    if (myTreesOnlyCheckbox) {
-        myTreesOnlyCheckbox.addEventListener('change', e => {
+        // Чекбокс "Мои деревья"
+        myTreesOnlyCheckbox?.addEventListener('change', e => {
             showMyTreesOnly = e.target.checked;
+            currentPage = 1; // сброс на первую страницу
             renderTreeCards();
             renderPagination();
         });
     }
 
-    // Навешиваем поиск
-    if (searchInput) {
-        searchInput.addEventListener('input', e => {
-            searchQuery = e.target.value;
-            renderTreeCards();
-            renderPagination();
-        });
-    }
+    // Поиск для всех
+    searchInput?.addEventListener('input', e => {
+        searchQuery = e.target.value.trim();
+        currentPage = 1; // сброс на первую страницу при поиске
+        renderTreeCards();
+        renderPagination();
+    });
 }
 
-
+// ─── Запуск скрипта ───────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    await initUser();      // определяем авторизован ли пользователь
+    setupFilters();        // настраиваем поиск и фильтры
+});
 
 // ─── Модальное окно ─────────────────────────────────
 function setupModal() {
@@ -369,10 +359,14 @@ if (themeToggle) {
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         themeToggle.textContent = isDark ? '☀️' : '🌙';
     });
-}ы
+}
 
 
 // Запуск после загрузки страницы
+document.addEventListener('DOMContentLoaded', async () => {
+    await initUser();      // получаем статус авторизации
+    setupFilters();        // настраиваем фильтры после проверки
+});
 document.addEventListener('DOMContentLoaded', setupFilters);
 
 function closeModal() {

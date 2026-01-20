@@ -5,34 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Tree Encyclopedia</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='16'>🌳</text></svg>">
 </head>
 <body>
     <div class="auth-container">
         <div class="auth-card">
-            <h1>🌳 Welcome Back</h1>
-            <p class="auth-subtitle">Login to continue exploring</p>
+            <h1>🌳 Добро пожаловать</h1>
+            <p class="auth-subtitle">Войдите для продолжения</p>
             
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="username">Username or Email</label>
+                    <label for="username">логин или Email</label>
                     <input type="text" id="username" name="username" required autocomplete="username">
                 </div>
                 
                 <div class="form-group">
-                    <label for="password">Password</label>
+                    <label for="password">Пароль</label>
                     <input type="password" id="password" name="password" required autocomplete="current-password">
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-block">Login</button>
+                <button type="submit" class="btn btn-primary btn-block">Войти</button>
             </form>
             
             <div class="auth-message" id="message"></div>
             
             <p class="auth-footer">
-                Don't have an account? <a href="/register">Register here</a>
+                Еще нет аккаунта? <a href="/register">Нажмите тут</a>
             </p>
             <p class="auth-footer">
-                <a href="/">Back to Home</a>
+                <a href="/">Главная страница</a>
             </p>
         </div>
     </div>
