@@ -267,9 +267,13 @@ function openModal(tree) {
         factsHTML = Object.entries(tree.facts).map(([k,v]) => `<div class="fact-item"><strong>${k}:</strong> ${v}</div>`).join('');
     } else factsHTML = '<p style="color:#999;">Факты не указаны</p>';
 
+    const canEditOrDelete = currentUser && (currentUser.id === tree.createdBy || currentUser.role === 'admin');
+
     let deleteBtnHTML = '';
-    if (currentUser && (currentUser.id === tree.createdBy || currentUser.role === 'admin')) {
+    let editBtnHTML = '';
+    if (canEditOrDelete) {
         deleteBtnHTML = `<button id="deleteTreeBtn" style="background:#dc3545;color:white;padding:12px 24px;border:none;border-radius:8px;cursor:pointer;font-weight:600;margin-top:20px;">🗑️ Удалить дерево</button>`;
+        editBtnHTML = `<button id="editTreeBtn" style="background:#28a745;color:white;padding:12px 24px;border:none;border-radius:8px;cursor:pointer;font-weight:600;margin-top:20px;margin-left:12px;">✏️ Редактировать дерево</button>`;
     }
 
     modalBody.innerHTML = `
@@ -280,12 +284,13 @@ function openModal(tree) {
         <div class="modal-section"><h3>Описание</h3><p>${tree.description}</p></div>
         <div class="modal-section"><h3>Место обитания</h3><p>${tree.habitat}</p></div>
         <div class="modal-section"><h3>Ключевые факты</h3>${factsHTML}</div>
-        ${deleteBtnHTML}
+        <div style="margin-top:20px;">${deleteBtnHTML}${editBtnHTML}</div>
     `;
 
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
 
+    // Delete button (старый код)
     const deleteBtn = document.getElementById('deleteTreeBtn');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', async () => {
@@ -293,11 +298,37 @@ function openModal(tree) {
             try {
                 const res = await fetch(`/api/trees/${tree.id}`, { method: 'DELETE', credentials: 'include' });
                 const result = await res.json();
-                if (result.success) { alert('Дерево удалено'); closeModal(); loadTrees(currentPage); }
-                else alert('Ошибка: ' + (result.error || 'Не удалось удалить'));
-            } catch { alert('Ошибка при удалении'); }
+                if (result.success) {
+                    alert('Дерево удалено');
+                    closeModal();
+                    loadTrees();
+                } else alert('Ошибка: ' + (result.error || 'Не удалось удалить'));
+            } catch {
+                alert('Ошибка при удалении');
+            }
         });
     }
+
+    // Edit button — новое
+    const editBtn = document.getElementById('editTreeBtn');
+    if (editBtn) {
+        editBtn.addEventListener('click', () => {
+            window.location.href = `/add-tree?id=${tree.id}`;
+        });
+    }
+}
+
+const themeToggle = document.getElementById('themeToggle');
+if (themeToggle) {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') document.body.classList.add('dark-mode');
+
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        themeToggle.textContent = isDark ? '☀️' : '🌙';
+    });
 }
 
 function closeModal() {

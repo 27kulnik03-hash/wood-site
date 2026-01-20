@@ -4,20 +4,64 @@
     box-sizing: border-box;
 }
 
-html, body {
-    height: 100%;
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+html {
+    min-height: 100%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     background-attachment: fixed;
     background-size: cover;
 }
 
-/* Вся страница в обёртке, чтобы футер был внизу */
 body {
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body.dark-mode #searchInput {
+    background: rgba(30, 32, 55, 0.92);
+    color: #000;              /* ← ЧЁРНЫЙ ТЕКСТ */
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    border: 1px solid #555577;
+}
+
+body.dark-mode {
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: scroll; /* То же самое для тёмной темы */
+    color: #e0e0e0;
+}
+
+/* Карточки деревьев в тёмной теме — белый/светлый текст */
+body.dark-mode .tree-card {
+    background: #1e1e2f;
+    color: #fff; /* Основной текст карточки теперь белый */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+body.dark-mode .tree-card-name {
+    color: #fff; /* Название дерева — чисто белое */
+}
+
+body.dark-mode .tree-card-scientific {
+    color: #ccc; /* Научное название — светло-серое, чтобы отличалось от основного */
+}
+
+/* Остальные карточки/модалки (на всякий случай) */
+body.dark-mode .auth-card,
+body.dark-mode .modal-content,
+body.dark-mode .admin-card {
+    background: #1e1e2f;
+    color: #eee;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+body.dark-mode input,
+body.dark-mode textarea {
+    background: #2d2d44;
+    border-color: #444;
+    color: #eee;
 }
 
 /* Контент растягивается на оставшееся место */

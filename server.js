@@ -79,20 +79,20 @@ async function initializeDatabase() {
     try {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(255) UNIQUE NOT NULL,
+                                                 id SERIAL PRIMARY KEY,
+                                                 username VARCHAR(255) UNIQUE NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 avatar VARCHAR(255),
                 role VARCHAR(50) DEFAULT 'user',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+                );
         `);
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS trees (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
+                                                 id SERIAL PRIMARY KEY,
+                                                 name VARCHAR(255) NOT NULL,
                 scientific_name VARCHAR(255) NOT NULL,
                 description TEXT NOT NULL,
                 habitat TEXT NOT NULL,
@@ -100,7 +100,7 @@ async function initializeDatabase() {
                 facts JSONB DEFAULT '{}',
                 created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+                );
         `);
 
         console.log('✅ Таблицы инициализированы');
@@ -225,34 +225,78 @@ app.get('/api/user/profile', requireAuth, checkDbReady, async (req, res) => {
 // ─── Деревья ───────────────────────────────────────
 app.get('/api/trees', checkDbReady, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;   // текущая страница, по умолчанию 1
-        const limit = 8;                              // максимум 8 деревьев на страницу
-        const offset = (page - 1) * limit;           // смещение
-
-        // Сначала считаем общее количество деревьев
-        const countResult = await pool.query('SELECT COUNT(*) FROM trees');
-        const total = parseInt(countResult.rows[0].count);
-        const totalPages = Math.ceil(total / limit);
-
-        // Получаем деревья для текущей страницы
         const result = await pool.query(`
             SELECT t.*, u.username as creator_name
             FROM trees t
             LEFT JOIN users u ON t.created_by = u.id
             ORDER BY t.created_at DESC
-            LIMIT $1 OFFSET $2
-        `, [limit, offset]);
+        `);
 
         res.json({
             success: true,
-            page,
-            totalPages,
-            totalItems: total,
             trees: result.rows
         });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Не удалось загрузить деревья' });
+    }
+});
+
+// Новый эндпоинт: получение одного дерева
+app.get('/api/trees/:id', checkDbReady, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(`
+            SELECT t.*, u.username as creator_name
+            FROM trees t
+            LEFT JOIN users u ON t.created_by = u.id
+            WHERE t.id = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Дерево не найдено' });
+        }
+
+        res.json({
+            success: true,
+            tree: result.rows[0]
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
+app.put('/api/trees/:id', requireAuth, checkDbReady, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, scientificName, description, habitat, image, facts } = req.body;
+
+        if (!name || !scientificName || !description || !habitat || !image) {
+            return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
+        }
+
+        // Проверка прав
+        const ownerRes = await pool.query('SELECT created_by FROM trees WHERE id = $1', [id]);
+        if (ownerRes.rows.length === 0) return res.status(404).json({ error: 'Дерево не найдено' });
+
+        const isOwner = ownerRes.rows[0].created_by === req.session.user.id;
+        const isAdmin = req.session.user.role === 'admin';
+        if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Нет прав на редактирование' });
+
+        const factsJson = facts && typeof facts === 'object' ? JSON.stringify(facts) : '{}';
+
+        await pool.query(`
+            UPDATE trees
+            SET name = $1, scientific_name = $2, description = $3, habitat = $4,
+                image = $5, facts = $6
+            WHERE id = $7
+        `, [name, scientificName, description, habitat, image, factsJson, id]);
+
+        res.json({ success: true, message: 'Дерево обновлено' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Ошибка при обновлении' });
     }
 });
 

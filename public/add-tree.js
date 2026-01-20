@@ -1,24 +1,100 @@
-// Проверка авторизации
+let currentImage = null; // Хранит текущее изображение (base64) при редактировании
+let treeId = null;       // ID дерева при редактировании
+let isEditMode = false;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Определяем режим по параметру id в URL
+    const urlParams = new URLSearchParams(window.location.search);
+    treeId = urlParams.get('id');
+    isEditMode = !!treeId;
+
+    if (isEditMode) {
+        document.getElementById('pageTitle').textContent = '🌳 Редактировать дерево';
+        document.getElementById('pageTitleElement').textContent = 'Редактировать дерево - Tree Encyclopedia';
+        document.getElementById('submitBtn').textContent = 'Сохранить изменения';
+        document.querySelector('label[for="image"]').textContent = 'Новое изображение (опционально)';
+        document.querySelector('small').textContent = 'При редактировании можно оставить текущее изображение.';
+
+        await loadTreeData();
+    } else {
+        // Для добавления — добавляем один пустой факт по умолчанию
+        addFactField();
+    }
+
+    setupEventListeners();
+    await checkAuth();
+});
+
 async function checkAuth() {
     try {
         const res = await fetch('/api/auth/check', { credentials: 'include' });
         const data = await res.json();
-
         if (!data.loggedIn) {
             alert('Нужно войти в аккаунт');
             window.location.href = '/login';
-            return false;
         }
-        return true;
     } catch (err) {
         console.error('Auth check error:', err);
-        return false;
     }
 }
 
-// Превью изображения
-const imageInput = document.getElementById('image');
-if (imageInput) {
+async function loadTreeData() {
+    try {
+        const res = await fetch(`/api/trees/${treeId}`, { credentials: 'include' });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Не удалось загрузить дерево');
+
+        const tree = data.tree;
+
+        document.getElementById('name').value = tree.name || '';
+        document.getElementById('scientificName').value = tree.scientific_name || '';
+        document.getElementById('description').value = tree.description || '';
+        document.getElementById('habitat').value = tree.habitat || '';
+
+        // Текущее изображение
+        if (tree.image) {
+            currentImage = tree.image;
+            const preview = document.getElementById('previewImg');
+            preview.src = tree.image;
+            document.getElementById('imagePreview').style.display = 'block';
+        }
+
+        // Факты
+        const facts = tree.facts ? (typeof tree.facts === 'string' ? JSON.parse(tree.facts) : tree.facts) : {};
+        const container = document.getElementById('factsContainer');
+        container.innerHTML = ''; // очищаем
+
+        if (Object.keys(facts).length === 0) {
+            addFactField(); // пустой для нового
+        } else {
+            Object.entries(facts).forEach(([key, value]) => {
+                addFactField(key, value);
+            });
+        }
+    } catch (err) {
+        console.error('Ошибка загрузки данных:', err);
+        alert('Не удалось загрузить данные дерева');
+        window.location.href = '/';
+    }
+}
+
+function addFactField(key = '', value = '') {
+    const container = document.getElementById('factsContainer');
+    const group = document.createElement('div');
+    group.className = 'fact-input-group';
+    group.style.marginBottom = '10px';
+    group.innerHTML = `
+        <input type="text" class="fact-key" placeholder="Название факта" value="${key}" style="width:45%;margin-right:10px;padding:8px;">
+        <input type="text" class="fact-value" placeholder="Значение" value="${value}" style="width:45%;padding:8px;">
+        <button type="button" class="remove-fact" style="background:#dc3545;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;">×</button>
+    `;
+    group.querySelector('.remove-fact').onclick = () => group.remove();
+    container.appendChild(group);
+}
+
+function setupEventListeners() {
+    // Превью нового изображения
+    const imageInput = document.getElementById('image');
     imageInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -33,139 +109,80 @@ if (imageInput) {
         reader.onload = ev => {
             document.getElementById('previewImg').src = ev.target.result;
             document.getElementById('imagePreview').style.display = 'block';
+            currentImage = ev.target.result; // обновляем текущее для отправки
         };
         reader.readAsDataURL(file);
     });
-} else {
-    console.error('Input #image не найден');
-}
 
-// Добавление факта
-const addFactBtn = document.getElementById('addFactBtn');
-if (addFactBtn) {
-    addFactBtn.addEventListener('click', () => {
-        const container = document.getElementById('factsContainer');
-        if (!container) return;
+    // Добавление факта
+    document.getElementById('addFactBtn').addEventListener('click', () => addFactField());
 
-        const group = document.createElement('div');
-        group.className = 'fact-input-group';
-        group.style.marginBottom = '10px';
-        group.innerHTML = `
-            <input type="text" class="fact-key" placeholder="Название факта" style="width:45%;margin-right:10px;padding:8px;">
-            <input type="text" class="fact-value" placeholder="Значение" style="width:45%;padding:8px;">
-            <button type="button" class="remove-fact" style="background:#dc3545;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;">×</button>
-        `;
-        group.querySelector('.remove-fact').onclick = () => group.remove();
-        container.appendChild(group);
-    });
-}
-
-// Удаление фактов
-document.addEventListener('click', e => {
-    if (e.target.classList.contains('remove-fact')) {
-        e.target.closest('.fact-input-group')?.remove();
-    }
-});
-
-// Главный обработчик формы
-const form = document.getElementById('addTreeForm');
-
-if (!form) {
-    console.error('ФОРМА #addTreeForm НЕ НАЙДЕНА — кнопка не будет работать!');
-} else {
-    ('Форма найдена — привязываем submit');
-    form.addEventListener('submit', async e => {
+    // Форма
+    document.getElementById('addTreeForm').addEventListener('submit', async e => {
         e.preventDefault();
-        ('SUBMIT СРАБОТАЛ! Начинаем отправку');
-
-        if (!(await checkAuth())) {
-            ('Авторизация не пройдена — стоп');
-            return;
-        }
 
         const msg = document.getElementById('message');
         msg.className = 'auth-message';
         msg.textContent = '';
         msg.style.display = 'none';
 
-        const formData = new FormData(e.target);
         const payload = {
-            name: formData.get('name')?.trim(),
-            scientificName: formData.get('scientificName')?.trim(),
-            description: formData.get('description')?.trim(),
-            habitat: formData.get('habitat')?.trim(),
-            image: '',
+            name: document.getElementById('name').value.trim(),
+            scientificName: document.getElementById('scientificName').value.trim(),
+            description: document.getElementById('description').value.trim(),
+            habitat: document.getElementById('habitat').value.trim(),
+            image: currentImage || '', // если нет изображения вообще — ошибка ниже
             facts: {}
         };
 
+        // Валидация обязательных полей
         if (!payload.name || !payload.scientificName || !payload.description || !payload.habitat) {
             msg.className = 'auth-message error';
             msg.textContent = 'Заполните все обязательные поля';
             msg.style.display = 'block';
-            console.warn('Валидация не пройдена — поля пустые');
             return;
         }
 
-        const file = formData.get('image');
-        if (!file || file.size === 0) {
+        if (!payload.image) {
             msg.className = 'auth-message error';
-            msg.textContent = 'Выберите изображение';
-            msg.style.display = 'block';
-            console.warn('Изображение не выбрано');
-            return;
-        }
-
-        try {
-            payload.image = await new Promise((resolve, reject) => {
-                const r = new FileReader();
-                r.onload = () => resolve(r.result);
-                r.onerror = reject;
-                r.readAsDataURL(file);
-            });
-            ('Изображение в base64 готово (длина:', payload.image.length, ')');
-        } catch (err) {
-            console.error('Ошибка base64:', err);
-            msg.textContent = 'Ошибка обработки изображения';
+            msg.textContent = 'Изображение обязательно';
             msg.style.display = 'block';
             return;
         }
 
-        // Факты
+        // Сбор фактов
         document.querySelectorAll('.fact-input-group').forEach(g => {
             const k = g.querySelector('.fact-key')?.value.trim();
             const v = g.querySelector('.fact-value')?.value.trim();
             if (k && v) payload.facts[k] = v;
         });
 
-        ('Полный payload:', payload);
+        const url = isEditMode ? `/api/trees/${treeId}` : '/api/trees';
+        const method = isEditMode ? 'PUT' : 'POST';
 
         try {
-            const res = await fetch('/api/trees', {
-                method: 'POST',
+            const res = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify(payload)
             });
 
             const result = await res.json();
-            ('Ответ сервера:', result);
 
             if (res.ok && result.success) {
                 msg.className = 'auth-message success';
-                msg.textContent = 'Дерево добавлено!';
+                msg.textContent = isEditMode ? 'Изменения сохранены!' : 'Дерево добавлено!';
                 msg.style.display = 'block';
                 setTimeout(() => window.location.href = '/', 1500);
             } else {
                 throw new Error(result.error || 'Ошибка сервера');
             }
         } catch (err) {
-            console.error('Ошибка fetch:', err);
+            console.error('Ошибка отправки:', err);
             msg.className = 'auth-message error';
-            msg.textContent = err.message || 'Не удалось добавить';
+            msg.textContent = err.message || 'Не удалось сохранить';
             msg.style.display = 'block';
         }
     });
 }
-
-// Запуск проверки при загрузке
-checkAuth();
