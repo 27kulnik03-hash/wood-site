@@ -238,40 +238,36 @@ function setupFilters() {
     const myTreesOnlyCheckbox = document.getElementById('myTreesOnly');
     const searchInput = document.getElementById('searchInput');
 
-    const isAuthorized = !!window.currentUser;
+    if (!filterToggleBtn || !filtersPanel) return;
 
-    // Панель фильтров только для авторизованных
-    if (!isAuthorized) {
-        if (filterToggleBtn) filterToggleBtn.style.display = 'none';
-        if (filtersPanel) filtersPanel.style.display = 'none';
-    } else {
-        if (filterToggleBtn) filterToggleBtn.style.display = 'inline-block';
-        if (filtersPanel) filtersPanel.style.display = 'none';
+    const isAuthorized = !!currentUser;
 
-        // Кнопка фильтров
-        filterToggleBtn?.addEventListener('click', () => {
-            const isHidden = filtersPanel.style.display === 'none';
-            filtersPanel.style.display = isHidden ? 'block' : 'none';
-            filterToggleBtn.textContent = isHidden ? 'Закрыть фильтры ⚙️' : '⚙️ Фильтры';
-        });
+    filterToggleBtn.style.display = isAuthorized ? 'inline-block' : 'none';
+    filtersPanel.style.display = 'none';
 
-        // Чекбокс "Мои деревья"
-        myTreesOnlyCheckbox?.addEventListener('change', e => {
-            showMyTreesOnly = e.target.checked;
-            currentPage = 1; // сброс на первую страницу
-            renderTreeCards();
-            renderPagination();
-        });
-    }
+    if (!isAuthorized) return;
 
-    // Поиск для всех
+    filterToggleBtn.onclick = () => {
+        const isHidden = filtersPanel.style.display === 'none';
+        filtersPanel.style.display = isHidden ? 'block' : 'none';
+        filterToggleBtn.textContent = isHidden
+            ? 'Закрыть фильтры ⚙️'
+            : '⚙️ Фильтры';
+    };
+
+    myTreesOnlyCheckbox?.addEventListener('change', e => {
+        showMyTreesOnly = e.target.checked;
+        currentPage = 1;
+        renderTreeCards();
+    });
+
     searchInput?.addEventListener('input', e => {
         searchQuery = e.target.value.trim();
-        currentPage = 1; // сброс на первую страницу при поиске
+        currentPage = 1;
         renderTreeCards();
-        renderPagination();
     });
 }
+
 
 // ─── Запуск скрипта ───────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
