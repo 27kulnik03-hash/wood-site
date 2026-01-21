@@ -54,12 +54,25 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 app.use(session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || 'dev-secret',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 24 * 60 * 60 * 1000, sameSite: 'lax' }
+    cookie: {
+        secure: isProduction,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: isProduction ? 'none' : 'lax'
+    }
 }));
+
+function requireAdmin(req, res, next) {
+    if (!req.session.user || req.session.user.role !== 'admin') {
+        return res.status(403).send('Доступ запрещён');
+    }
+    next();
+}
 
 // ─── Проверка авторизации и готовности БД ────────────
 let dbReady = false;
@@ -112,6 +125,46 @@ async function initializeDatabase() {
 }
 
 // ─── Auth API ────────────────────────────────────────
+
+app.delete('/api/admin/users/:id', requireAdmin, checkDbReady, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+
+        // Защита: админ не может удалить сам себя
+        if (userId === req.session.user.id) return res.status(400).json({ error: 'Cannot delete yourself' });
+
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        res.json({ success: true, message: 'User deleted' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+app.get('/admin', requireAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// API для админки
+app.get('/api/admin/users', requireAdmin, checkDbReady, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT u.id, u.username, u.email, u.role, u.created_at,
+                   COUNT(t.id) AS trees_count
+            FROM users u
+            LEFT JOIN trees t ON t.created_by = u.id
+            GROUP BY u.id
+            ORDER BY u.created_at DESC
+        `);
+
+        res.json({ success: true, users: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Ошибка сервера' });
+    }
+});
+
 app.get('/api/auth/check', (req, res) => {
     res.json({
         loggedIn: !!req.session.user,

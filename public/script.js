@@ -237,30 +237,43 @@ function setupFilters() {
     const filtersPanel = document.getElementById('filtersPanel');
     const myTreesOnlyCheckbox = document.getElementById('myTreesOnly');
     const searchInput = document.getElementById('searchInput');
-
-    if (!filterToggleBtn || !filtersPanel) return;
+    const userMenu = document.getElementById('userDropdownMenu');
 
     const isAuthorized = !!currentUser;
 
-    filterToggleBtn.style.display = isAuthorized ? 'inline-block' : 'none';
-    filtersPanel.style.display = 'none';
+    // Фильтры — только для авторизованных
+    if (filterToggleBtn && filtersPanel) {
+        filterToggleBtn.style.display = isAuthorized ? 'inline-block' : 'none';
+        filtersPanel.style.display = 'none';
 
-    if (!isAuthorized) return;
+        if (isAuthorized) {
+            // 🛠 Админка — добавляем только один раз
+            if (currentUser.role === 'admin' && userMenu && !document.getElementById('adminPanelBtn')) {
+                const adminBtn = document.createElement('button');
+                adminBtn.id = 'adminPanelBtn';
+                adminBtn.className = 'dropdown-item';
+                adminBtn.textContent = '🛠 Админка';
+                adminBtn.onclick = () => window.location.href = '/admin';
+                userMenu.prepend(adminBtn);
+            }
 
-    filterToggleBtn.onclick = () => {
-        const isHidden = filtersPanel.style.display === 'none';
-        filtersPanel.style.display = isHidden ? 'block' : 'none';
-        filterToggleBtn.textContent = isHidden
-            ? 'Закрыть фильтры ⚙️'
-            : '⚙️ Фильтры';
-    };
+            filterToggleBtn.onclick = () => {
+                const isHidden = filtersPanel.style.display === 'none';
+                filtersPanel.style.display = isHidden ? 'block' : 'none';
+                filterToggleBtn.textContent = isHidden
+                    ? 'Закрыть фильтры ⚙️'
+                    : '⚙️ Фильтры';
+            };
 
-    myTreesOnlyCheckbox?.addEventListener('change', e => {
-        showMyTreesOnly = e.target.checked;
-        currentPage = 1;
-        renderTreeCards();
-    });
+            myTreesOnlyCheckbox?.addEventListener('change', e => {
+                showMyTreesOnly = e.target.checked;
+                currentPage = 1;
+                renderTreeCards();
+            });
+        }
+    }
 
+    // Поиск — для всех пользователей
     searchInput?.addEventListener('input', e => {
         searchQuery = e.target.value.trim();
         currentPage = 1;
@@ -269,11 +282,6 @@ function setupFilters() {
 }
 
 
-// ─── Запуск скрипта ───────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-    await initUser();      // определяем авторизован ли пользователь
-    setupFilters();        // настраиваем поиск и фильтры
-});
 
 // ─── Модальное окно ─────────────────────────────────
 function setupModal() {

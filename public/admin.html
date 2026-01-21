@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Admin - Tree Encyclopedia</title>
+    <title>Админ панель</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='16'>🌳</text></svg>">
     <style>
         .admin-container {
             max-width: 1200px;
@@ -81,6 +82,18 @@
             opacity: 0.9;
             font-size: 1rem;
         }
+        .delete-btn {
+            padding: 6px 12px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .delete-btn:hover {
+            background: #b02a37;
+        }
         .back-link {
             display: inline-block;
             margin-top: 20px;
@@ -91,103 +104,166 @@
         .back-link:hover {
             text-decoration: underline;
         }
+        /* --- Заголовок панели --- */
+        body.dark-mode .admin-header h1 {
+            color: #ffffff; /* белый текст */
+        }
+
+        /* --- Заголовки таблицы --- */
+        body.dark-mode th {
+            background-color: #2d2d44; /* тёмный фон для заголовков */
+            color: #ffffff;             /* белый текст */
+            border-bottom: 1px solid #444;
+        }
+
+        /* --- Строки таблицы в темной теме (чтобы контраст был лучше) --- */
+        body.dark-mode td {
+            color: #e0e0e0;
+            border-bottom: 1px solid #444;
+        }
+
+        body.dark-mode tr:hover {
+            background-color: #3a3a5a;
+        }
     </style>
 </head>
 <body>
-    <div class="admin-container">
-        <div class="admin-card">
-            <div class="admin-header">
-                <h1>📊 Database Admin Panel</h1>
-                <button class="refresh-btn" onclick="loadUsers()">🔄 Refresh</button>
-            </div>
-            
-            <div class="stats" id="stats">
-                <!-- Stats will be loaded here -->
-            </div>
-            
-            <div id="loading" style="text-align: center; padding: 40px;">
-                <p>Loading users...</p>
-            </div>
-            
-            <div id="usersTable" style="display: none;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Created At</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersBody">
-                        <!-- Users will be loaded here -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <a href="/" class="back-link">← Back to Home</a>
+<div class="admin-container">
+    <div class="admin-card">
+        <div class="admin-header">
+            <h1>📊 Админ панель</h1>
+            <button class="refresh-btn" onclick="loadUsers()">🔄 Обновить</button>
         </div>
-    </div>
 
-    <script>
-        async function loadUsers() {
-            try {
-                const response = await fetch('/api/admin/users');
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayUsers(data.users);
-                    displayStats(data.users);
-                } else {
-                    document.getElementById('loading').innerHTML = 
-                        '<p style="color: red;">Error: ' + (data.error || 'Failed to load users') + '</p>';
-                }
-            } catch (error) {
-                console.error('Error loading users:', error);
-                document.getElementById('loading').innerHTML = 
-                    '<p style="color: red;">Error loading users. Make sure the server is running.</p>';
-            }
-        }
+        <div class="stats" id="stats">
+            <!-- Stats will be loaded here -->
+        </div>
 
-        function displayStats(users) {
-            const statsDiv = document.getElementById('stats');
-            statsDiv.innerHTML = `
-                <div class="stat-card">
-                    <p>Total Users</p>
-                    <h3>${users.length}</h3>
-                </div>
-                <div class="stat-card">
-                    <p>Database File</p>
-                    <h3 style="font-size: 1.5rem;">trees.db</h3>
-                </div>
-            `;
-        }
+        <div id="loading" style="text-align: center; padding: 40px;">
+            <p>Загрузка пользователей...</p>
+        </div>
 
-        function displayUsers(users) {
-            const loading = document.getElementById('loading');
-            const table = document.getElementById('usersTable');
-            const tbody = document.getElementById('usersBody');
-            
-            loading.style.display = 'none';
-            table.style.display = 'block';
-            
-            if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">No users found in database</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = users.map(user => `
+        <div id="usersTable" style="display: none;">
+            <table>
+                <thead>
                 <tr>
-                    <td>${user.id}</td>
-                    <td><strong>${user.username}</strong></td>
-                    <td>${user.email}</td>
-                    <td>${new Date(user.created_at).toLocaleString()}</td>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Created At</th>
+                    <th>Trees Created</th>
+                    <th>Action</th>
                 </tr>
-            `).join('');
+                </thead>
+                <tbody id="usersBody">
+                <!-- Users will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <a href="/" class="back-link">← Главная</a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Автоматическое включение тёмной темы, если пользователь ранее её выбрал
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
         }
 
-        // Load users on page load
+        // Загружаем пользователей сразу
         loadUsers();
-    </script>
+    });
+
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/admin/users');
+            const data = await response.json();
+
+            if (data.success) {
+                displayUsers(data.users);
+                displayStats(data.users);
+            } else {
+                document.getElementById('loading').innerHTML =
+                    '<p style="color: red;">Error: ' + (data.error || 'Failed to load users') + '</p>';
+            }
+        } catch (error) {
+            console.error('Error loading users:', error);
+            document.getElementById('loading').innerHTML =
+                '<p style="color: red;">Error loading users. Make sure the server is running.</p>';
+        }
+    }
+
+    function displayStats(users) {
+        const statsDiv = document.getElementById('stats');
+        statsDiv.innerHTML = `
+        <div class="stat-card">
+            <p>Total Users</p>
+            <h3>${users.length}</h3>
+        </div>
+    `;
+    }
+
+    function displayUsers(users) {
+        const loading = document.getElementById('loading');
+        const table = document.getElementById('usersTable');
+        const tbody = document.getElementById('usersBody');
+
+        loading.style.display = 'none';
+        table.style.display = 'block';
+
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">No users found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = users.map(user => {
+            const role = user.role ? user.role : 'user'; // корректно выводим роль
+            const deleteBtn = role !== 'admin'
+                ? `<button style="padding:5px 10px;color:white;background:#dc3545;border:none;border-radius:5px;cursor:pointer;" onclick="deleteUser(${user.id})">Delete</button>`
+                : '';
+
+            const treesCount = user.trees_count !== undefined ? user.trees_count : 0;
+
+            return `
+            <tr>
+                <td>${user.id}</td>
+                <td><strong>${user.username}</strong></td>
+                <td>${user.email}</td>
+                <td>${role}</td>
+                <td>${new Date(user.created_at).toLocaleString()}</td>
+                <td>${treesCount}</td>
+                <td>${deleteBtn}</td>
+            </tr>
+        `;
+        }).join('');
+    }
+
+
+    // Удаление пользователя
+    async function deleteUser(userId) {
+        if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) return;
+
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+            const result = await res.json();
+            if (result.success) {
+                alert('Пользователь удалён');
+                loadUsers();
+            } else {
+                alert('Ошибка: ' + (result.error || 'Не удалось удалить'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Ошибка при удалении');
+        }
+    }
+
+    // Загружаем пользователей при открытии страницы
+    loadUsers();
+</script>
 </body>
 </html>
